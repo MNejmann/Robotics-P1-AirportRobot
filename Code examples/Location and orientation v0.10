@@ -38,7 +38,8 @@ int countsRight(){
   encoders.getCountsAndResetRight();
 }
 
-float CPR = 51.45*12;
+// float CPR = 75.81*12; //This is for  75:1 gearing
+float CPR = 51.45*12; //This is for 50:1 gearing
 float distLeft = 4.25;
 float distRight = 4.25;
 float deltaL = ((encoders.getCountsAndResetLeft()/CPR)*M_PI*3.9);

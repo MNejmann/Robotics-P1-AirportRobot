@@ -1,0 +1,75 @@
+
+#include <Wire.h>
+#include <Zumo32U4.h>
+#include <math.h>
+// udregning af distance, Distance traveled = Wheel rotations * 
+//circumference = (encoder ticks / counts per revolution) * circumference
+// hvilket vil sgie (encoderticks/51.45*12) * 39 x pi
+Zumo32U4Encoders encoders;
+Zumo32U4Buzzer buzzer;
+Zumo32U4Motors motors;
+Zumo32U4ButtonA buttonA;
+Zumo32U4ButtonC buttonC;
+Zumo32U4LCD display;
+float cmRight = 0;
+float cmLeft = 0;
+float motorSpeed = 150;
+// float CPR = 75.81*12; //This if for 75:1 gearing
+float CPR = 51.45*12; //This if for 50:1 gearing
+float D = 3.9;
+
+float TRight = 40;
+float TLeft = 40;
+float DiffRight;
+float DiffLeft;
+
+char report[120];
+
+
+void setup() {
+  buttonA.waitForPress();
+  delay(1000);
+  // put your setup code here, to run once:
+
+}
+
+void moveXCMeters(){
+  cmRight = (encoders.getCountsRight()/(CPR))*D*M_PI;
+  cmLeft = (encoders.getCountsLeft()/(CPR))*D*M_PI;
+  DiffRight = TRight-cmRight;
+  DiffLeft = TLeft-cmLeft;
+  if (cmRight < TRight){
+    motors.setRightSpeed(motorSpeed);
+  }
+  else{
+    motors.setRightSpeed(0);
+  }
+
+  
+  if (cmLeft < TLeft){
+    motors.setLeftSpeed(motorSpeed);
+  }
+  
+  else {
+    motors.setLeftSpeed(0);
+  }
+
+}
+
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  int16_t countsLeft = encoders.getCountsLeft();
+  int16_t countsRight = encoders.getCountsRight();
+
+
+  // Update the display with encoder counts and error info.
+  display.clear();
+  display.print(countsLeft);
+  display.gotoXY(0, 1);
+  display.print(countsRight);
+  moveXCMeters();
+
+  Serial.println("Encoder " + (String)countsLeft + " " + (String)countsRight + " Distance " + (String)cmLeft + " " + (String)cmRight + " Target " + (String)TLeft + " " + (String)TRight + " Diff " + (String)DiffLeft + " " + (String)DiffRight);
+
+}
