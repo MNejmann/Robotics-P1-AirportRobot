@@ -1,0 +1,72 @@
+// Example on how to read from the gyrometer
+// built into the Pololu Zumo 32U4 Arduino-based robot.
+
+#include <Zumo32U4.h>
+#include "TurnSensor.h"
+#include <L3G.h>
+L3G gyro;
+Zumo32U4LCD lcd;
+Zumo32U4Encoders encoders;
+Zumo32U4Buzzer buzzer;
+Zumo32U4Motors motors;
+Zumo32U4ButtonA buttonA;
+Zumo32U4ButtonC buttonC;
+Zumo32U4LCD display;
+
+// --- Helper functions
+int32_t getAngle() {
+  // turnAngle is a variable defined in TurnSensor.cpp
+  // This fancy math converts the number into degrees turned since the
+  // last sensor reset.
+  return (((int32_t)turnAngle >> 16) * 360) >> 16;
+}
+
+// --- Setup Method
+void setup() {
+  turnSensorSetup();
+  delay(500);
+  turnSensorReset();
+  lcd.clear();
+}
+int rotateAngle = 0;
+
+void calcAngle(){
+  delay(500);
+  rotateAngle = getAngle()+90;
+  if (rotateAngle >= 179){
+    rotateAngle = -1*rotateAngle+(rotateAngle-179);
+    
+  }
+ return rotateAngle;
+}
+
+
+void rotate90degrees(){
+calcAngle();
+delay(50);
+Serial.println((String)rotateAngle);
+do {
+  turnSensorUpdate();
+  Serial.println((String)rotateAngle + " " + (String)getAngle());
+  motors.setSpeeds(-290,200);
+}
+while (rotateAngle != getAngle());
+  motors.setSpeeds(0,0);
+}
+
+// --- Main program loop
+void loop() {
+  
+  // Read the sensors
+  turnSensorUpdate();
+  int32_t angle = getAngle();
+
+  // Update the display
+  lcd.gotoXY(0, 0);
+  lcd.print(angle);
+  lcd.print(" ");
+
+  if (buttonA.isPressed()){
+  rotate90degrees();
+  }  
+}
