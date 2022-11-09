@@ -1,0 +1,99 @@
+#include <Zumo32U4.h>
+#include <Wire.h>
+
+Zumo32U4Motors motors;
+Zumo32U4Encoders encoders;
+Zumo32U4LCD lcd;
+
+void setup() {
+  // put your setup code here, to run once:
+  encoders.init();
+}
+
+void forward(int lSpeed, int rSpeed, int runtime){
+  motors.setSpeeds(lSpeed, rSpeed);
+  delay(runtime);
+}
+
+void backward(int motorSpeed, int runtime){
+  motors.setSpeeds(-motorSpeed, -motorSpeed);
+  delay(runtime);
+}
+
+void turnLeft(int motorSpeed, int runtime){
+  motors.setSpeeds(-motorSpeed, motorSpeed);
+  delay(runtime);
+}
+
+void turnRight(int motorSpeed, int runtime){
+  motors.setSpeeds(motorSpeed, -motorSpeed);
+  delay(runtime);
+}
+
+int countsLeft(){
+  encoders.getCountsAndResetLeft();
+}
+
+int countsRight(){
+  encoders.getCountsAndResetRight();
+}
+
+float CPR = 51.45*12;
+float distLeft = 4.25;
+float distRight = 4.25;
+float deltaL = ((encoders.getCountsAndResetLeft()/CPR)*M_PI*3.9);
+float deltaR = ((encoders.getCountsAndResetRight()/CPR)*M_PI*3.9);
+float angle = ((deltaL-deltaR)/(distLeft+distRight)*(180/M_PI));
+float x = 10; float y = 10;
+
+
+int printAngle(){
+  lcd.clear();
+  lcd.print((String)angle);
+}
+
+void findLocation(){
+  float totalangle = 0; totalangle += angle;
+  float xSide = ((deltaL+deltaR)/2)*sin((angle/180*M_PI));
+  float ySide = sqrt(pow((deltaL+deltaR)/2,2)-pow(xSide,2));
+  x -= xSide;
+  y -= ySide;
+  float coordinates[2] = {x,y};
+  lcd.clear();
+  lcd.print("x: "+(String)coordinates[0]);
+  lcd.gotoXY(0, 1);
+  lcd.print("y: "+(String)coordinates[1]);
+
+  Serial.println("x: " + (String)coordinates[0] + " y: " + (String)coordinates[1] + " Angle " + (String)angle);
+}
+
+
+float adjustAngle(){
+  if(((deltaL-deltaR)/(distLeft+distRight)*(180/M_PI))<0){
+    angle = ((deltaL-deltaR)/(distLeft+distRight)*(180/M_PI)+12);
+  }else{
+    angle = ((deltaL-deltaR)/(distLeft+distRight)*(180/M_PI)-12);
+  }
+  return angle;
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  while(x>0 || y>0){
+
+    forward(150,-150,250);
+    deltaL = ((encoders.getCountsAndResetLeft()/CPR)*M_PI*3.9);
+    deltaR = ((encoders.getCountsAndResetRight()/CPR)*M_PI*3.9);
+    adjustAngle();
+    printAngle();
+    motors.setSpeeds(0,0);
+    delay(2000);
+    forward(150,150,500);
+    motors.setSpeeds(0,0);
+    findLocation();
+    delay(5000);
+    
+  }
+  lcd.clear();
+  lcd.print("Location found");
+}
