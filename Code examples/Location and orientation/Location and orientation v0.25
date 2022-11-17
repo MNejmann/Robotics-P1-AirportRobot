@@ -86,7 +86,7 @@ float destinationAngle(){
 
 void goToGate(){
   //Drive until within +-2 of partial destination
-  while((destinationX-1>round(x) || round(x)>destinationX+1) && (destinationY-1>round(y) || round(y)>destinationY+1)){
+  while((destinationX-1>round(x) || round(x)>destinationX+1) && (destinationY-1>round(y) || round(y)>destinationY+1)){ //Den her sætning forholder sig ikke til y-værdien, det skal fikses
     findLocation();
     delay(50);
     while(angle+-2 != round(calcAngle)){
