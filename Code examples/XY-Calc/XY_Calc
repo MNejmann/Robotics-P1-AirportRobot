@@ -1,0 +1,86 @@
+
+#include <Wire.h>
+#include <math.h>
+#include <Zumo32U4.h>
+#include "TurnSensor.h"
+#include <L3G.h>
+// udregning af distance, Distance traveled = Wheel rotations * 
+//circumference = (encoder ticks / counts per revolution) * circumference
+// hvilket vil sgie (encoderticks/51.45*12) * 39 x pi
+Zumo32U4Encoders encoders;
+Zumo32U4Motors motors;
+Zumo32U4ButtonA buttonA;
+Zumo32U4ButtonB buttonB;
+Zumo32U4ButtonC buttonC;
+Zumo32U4LCD display;
+Zumo32U4LCD lcd;
+L3G gyro;
+
+// Angiver de nødvendige variabler
+float cmRight = 0;
+float cmLeft = 0;
+float motorSpeed = 150;
+// float CPR = 75.81*12; //This if for 75:1 gearing
+float CPR = 51.45*12; //This if for 50:1 gearing
+float D = 3.9;
+
+float TRight = 40;
+float TLeft = 40;
+float xSide = 0;
+float ySide = 0;
+
+float deltaL = ((encoders.getCountsAndResetLeft()/CPR)*M_PI*3.9);
+float deltaR = ((encoders.getCountsAndResetRight()/CPR)*M_PI*3.9);
+float x = 0;
+float y = 0;
+
+
+int32_t getAngle(){  //Får vinklet givet i grader fra gyroscopet
+  // turnAngle is a variable defined in TurnSensor.cpp
+  // This fancy math converts the number into degrees turned since the
+  // last sensor reset.
+  return ((((int32_t)turnAngle >> 16) * 360) >> 16)*(-1);
+}
+
+void setup() {
+  buttonA.waitForPress();   //Når knap a blir trykket starter programmet
+  turnSensorSetup();        //Kører kalibrerings program for gyroen
+  delay(500);
+  lcd.clear();
+  turnSensorReset();        //Resetter gyro værdien
+  int32_t angle = getAngle();
+  delay(1000);
+}
+
+float xyLocation(){   //Denne function udregner vectoren den har kørt (x,y)
+  
+  float deltaL = ((encoders.getCountsLeft()/CPR)*M_PI*3.9);   //Udregner lægnden der er blevet kørt af hhv højre- og venstremotor, udfra encodersne
+  float deltaR = ((encoders.getCountsRight()/CPR)*M_PI*3.9);
+  xSide = ((deltaL+deltaR)/2)*sin(angle*(M_PI/180));          //Udregner x-koordinaten udfra trigometri hypotonusen/sin(A*Pi/180) - der blir ganget med pi'180 for at omregne til grader
+  ySide = sqrt(pow((deltaL+deltaR)/2,2)-pow(xSide,2));        //Udregner y-koordinaten udfra trigometri sqrt(C^2-xSide^2)
+}
+
+void moveXCMeters(){   //Denne function udregner antalcentrimeter kørt med hhv motor højre og venstre
+  cmRight = (encoders.getCountsRight()/(CPR))*D*M_PI;     //Udfra encodersne og cirkenperifien blir afstanden udregnet
+  cmLeft = (encoders.getCountsLeft()/(CPR))*D*M_PI;
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  int16_t countsLeft = encoders.getCountsLeft();    //angiver encodercountsleft og right, så det kan vises i serial monitoren senere.
+  int16_t countsRight = encoders.getCountsRight();
+  while (buttonB.isPressed()){    //denne while-loop bruges til at fastgøre en vinkel der skal benyttes når man skal udregne vectoren til hypotonusen.
+    angle = getAngle();
+  }
+
+  // Update the display with encoder counts and error info.
+  turnSensorUpdate();           //opdatere gyroen
+  display.clear();              //clear displayet
+  display.print(getAngle());    //printer vinklen konstant
+  display.gotoXY(0, 1);
+  moveXCMeters();               //kører de givne functioner.
+  xyLocation();
+                                //Printer adskillige værdier
+  Serial.println("Encoder " + (String)countsLeft + " " + (String)countsRight + " Distance " + (String)cmLeft + " " + (String)cmRight + " X " + (String)xSide + " Y " + (String)ySide + " Angle " + (String)angle);
+
+}
