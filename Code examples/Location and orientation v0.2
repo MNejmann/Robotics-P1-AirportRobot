@@ -1,0 +1,137 @@
+#include <Arduino_BuiltIn.h>
+#include <Zumo32U4.h>
+#include <Wire.h>
+#include <math.h>
+#include <Zumo32U4.h>
+#include "TurnSensor.h"
+#include <L3G.h>
+
+Zumo32U4Motors motors;
+Zumo32U4Encoders encoders;
+Zumo32U4LCD lcd;
+L3G gyro;
+Zumo32U4Buzzer buzzer;
+
+
+void setup() {
+  // put your setup code here, to run once:
+  encoders.init();
+  turnSensorSetup();
+  delay(500);
+  turnSensorReset();
+  lcd.clear();
+  turnSensorUpdate();
+  int32_t angle = getAngle();
+  findLocation();
+  destinationAngle();
+  delay(1000);
+}
+
+void forward(int lSpeed, int rSpeed, int runtime){
+  motors.setSpeeds(lSpeed, rSpeed);
+  delay(runtime);
+}
+
+float CPR = 51.45*12;
+float deltaL = ((encoders.getCountsAndResetLeft()/CPR)*M_PI*3.9);
+float deltaR = ((encoders.getCountsAndResetRight()/CPR)*M_PI*3.9);
+float x = 0; float y = 0;
+float totalAngle = 0;
+int32_t angle = getAngle();
+
+int32_t getAngle(){
+  // turnAngle is a variable defined in TurnSensor.cpp
+  // This fancy math converts the number into degrees turned since the
+  // last sensor reset.
+  return ((((int32_t)turnAngle >> 16) * 360) >> 16)*(-1);
+}
+float findLocation(){
+  deltaL = ((encoders.getCountsAndResetLeft()/CPR)*M_PI*3.9);
+  deltaR = ((encoders.getCountsAndResetRight()/CPR)*M_PI*3.9);
+  angle = round(getAngle());
+  float xSide = ((deltaL+deltaR)/2)*sin(angle*(M_PI/180));
+  float ySide = sqrt(pow((deltaL+deltaR)/2,2)-pow(xSide,2));
+  x += xSide;
+  y += ySide;
+  float coordinates[2] = {x,y};
+  lcd.clear();
+  lcd.print("x: "+(String)coordinates[0]);
+  lcd.gotoXY(0, 1);
+  lcd.print("y: "+(String)coordinates[1]);
+  Serial.println((String)deltaL + " " + (String)deltaR + " " + (String)angle + " "+ (String)x + " " + (String)y);
+}
+
+int destinationX = 20;
+int destinationY = 20;
+float calcAngle = 0;
+
+float destinationAngle(){
+  //Finds the angle so it points towards the destination
+  calcAngle = atan(((destinationY-y)/(destinationX-x)))*(180/M_PI);
+  return calcAngle;
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  //Drive until within +-5 of partial destination
+  while((destinationX-2>round(x) || round(x)>destinationX+2) && (destinationY-2>round(y) || round(y)>destinationY+2)){
+    findLocation();
+    delay(100);
+    if(x<destinationX && y<destinationY){
+      //turn right towards destination
+      while(angle != round(calcAngle)){
+        //Turn in order to face towards the destination
+        findLocation();
+        turnSensorUpdate();
+        angle = getAngle();
+        destinationAngle();
+        motors.setSpeeds(100,-100);
+      }
+    }
+    
+    
+    
+    
+    
+    /*else if(x>destinationX && y>destinationY){
+      //turn left towards destination
+      while(angle != round(calcAngle)){
+        //Turn in order to face towards the destination
+        findLocation();
+        turnSensorUpdate();
+        angle = getAngle();
+        destinationAngle();
+        motors.setSpeeds(-100,100);
+      }
+    }else if(x>destinationX && y<destinationY){
+      //turn left towards destination
+      while(angle != round(calcAngle)){
+        findLocation();
+        turnSensorUpdate();
+        angle = getAngle();
+        destinationAngle();
+        motors.setSpeeds(-100,100);
+      }
+      //Turn in order to face towards the destination
+      //}
+    }else if(x<destinationX && y>destinationY){
+      //turn left towards destination
+      while(angle != round(calcAngle)){
+        //Turn in order to face towards the destination
+        findLocation();
+        turnSensorUpdate();
+        angle = getAngle();
+        destinationAngle();
+        motors.setSpeeds(-100,100);
+      }
+    }*/
+    motors.setSpeeds(100,100);
+  }
+  findLocation();
+  motors.setSpeeds(0,0);
+  lcd.clear();
+  lcd.print("Location"); 
+  lcd.gotoXY(0, 1);
+  lcd.print("found");
+  delay(50);
+}
