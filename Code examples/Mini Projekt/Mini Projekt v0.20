@@ -60,8 +60,8 @@ void setup() {
 int i=0;
 
 void followLine(){
-  thresholdRC = 10;
-  thresholdLC = 10;
+  thresholdRC = 15;
+  thresholdLC = 15;
   if((sensorsState.LC==1 && sensorsState.C==1 && sensorsState.RC==0) || (sensorsState.LC==0 && sensorsState.C==1 && sensorsState.RC==1)){
     motors.setSpeeds(50,50);
   }else if(sensorsState.LC==0 && sensorsState.C==0 && sensorsState.RC==1){
@@ -121,7 +121,7 @@ void findLine(){
     motors.setSpeeds(100, 100);
     checkSensors();
     if(sensorsState.R==1 && sensorsState.L==1 && sensorsState.LC==1 && sensorsState.C==1 && sensorsState.RC==1){
-      delay(400); move(100,-100,900);
+      delay(400); move(100,-100,800);
       k = false;
     }
   }
