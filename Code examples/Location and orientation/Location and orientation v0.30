@@ -1,0 +1,218 @@
+#include <Arduino_BuiltIn.h>
+#include <Zumo32U4.h>
+#include <Wire.h>
+#include <math.h>
+#include <Zumo32U4.h>
+#include "TurnSensor.h"
+#include <L3G.h>
+
+Zumo32U4Motors motors;
+Zumo32U4Encoders encoders;
+Zumo32U4LCD lcd;
+L3G gyro;
+Zumo32U4Buzzer buzzer;
+
+
+void setup() {
+  // put your setup code here, to run once:
+  encoders.init();
+  turnSensorSetup();
+  delay(500);
+  turnSensorReset();
+  lcd.clear();
+  turnSensorUpdate();
+  int32_t angle = getAngle();
+  findLocation();
+  destinationAngle();
+  delay(1000);
+}
+
+void forward(int lSpeed, int rSpeed, int runtime){
+  motors.setSpeeds(lSpeed, rSpeed);
+  delay(runtime);
+}
+
+float CPR = 51.45*12;
+//Der skiftes mellem CPR = 51.45 eller 75.81
+float deltaL = ((encoders.getCountsAndResetLeft()/CPR)*M_PI*3.9);
+float deltaR = ((encoders.getCountsAndResetRight()/CPR)*M_PI*3.9);
+float x = 0; float y = 0;
+float totalAngle = 0;
+int32_t angle = getAngle();
+float xSide;
+float ySide;
+
+int32_t getAngle(){
+  // turnAngle is a variable defined in TurnSensor.cpp
+  // This fancy math converts the number into degrees turned since the
+  // last sensor reset.
+  return ((((int32_t)turnAngle >> 16) * 360) >> 16)*(-1);
+}
+
+int destinationX;
+int destinationY;
+float calcAngle;
+
+float findLocation(){
+  deltaL = ((encoders.getCountsAndResetLeft()/CPR)*M_PI*3.9);
+  deltaR = ((encoders.getCountsAndResetRight()/CPR)*M_PI*3.9);
+  angle = round(getAngle());
+  xSide = ((deltaL+deltaR)/2)*sin(fabs(angle)*(M_PI/180));
+  ySide = sqrt(pow((deltaL+deltaR)/2,2)-pow(xSide,2));
+  if(destinationX+-2<x){
+    x -= xSide;
+  }else{
+    x += xSide;
+  }
+  if(destinationY+-2<y){
+    y -= ySide;
+  }else{
+    y += ySide;
+  }
+  float coordinates[2] = {x,y};
+  lcd.clear();
+  lcd.print("x: "+(String)coordinates[0]);
+  lcd.gotoXY(0, 1);
+  lcd.print("y: "+(String)coordinates[1]);
+  //Serial.println((String)deltaL + " " + (String)deltaR + " " + (String)angle + " "+ (String)x + " " + (String)y);
+  return angle;
+}
+
+float destinationAngle(){
+  //Finds the angle so it points towards the destination
+  calcAngle = atan(((destinationX-x)/(destinationY-y)))*(180/M_PI);
+  if(destinationY<y && destinationX>x){
+    calcAngle = 90+fabs(atan((destinationY-y)/(destinationX-x))*(180/M_PI));
+  }else if(destinationY<y && destinationX<x && x>0){
+    calcAngle = -90+(atan((destinationY-y)/(destinationX-x))*(180/M_PI));
+  }else if(destinationY<y && destinationX<x && x<0){
+    calcAngle = 90+(atan((destinationY-y)/(destinationX-x))*(180/M_PI));
+  }
+  Serial.println((String)calcAngle);
+  return calcAngle;
+}
+
+int gateNumber;
+
+void goToGate(){
+  //Drive until within +-2 of partial destination
+  while((destinationX-2>round(x) || round(x)>destinationX+2) || (destinationY-2>round(y) || round(y)>destinationY+2)){ //Den her sætning forholder sig ikke til y-værdien, det skal fikses
+    findLocation();
+    delay(50);
+    while(angle+-1 != round(calcAngle)){
+      //Turn in order to face towards the destination
+      findLocation();
+      turnSensorUpdate();
+      destinationAngle();
+      if(calcAngle>angle){
+        motors.setSpeeds(80,-80);
+      }else if(angle+180<180){
+        motors.setSpeeds(80,-80);
+      }else if{
+        motors.setSpeeds(-80,80);
+      }
+      
+    }
+    motors.setSpeeds(100,100);
+  }
+  motors.setSpeeds(0,0);
+  //turnSensorReset();
+  
+}
+bool i = true;
+void loop() {
+  while(i){
+    gateNumber = 3;
+    //Needs to detect with color what gateNumber it needs to go to
+    if(gateNumber == 1){
+      destinationX = 36; destinationY = 58;
+      goToGate(); delay(2000);
+      destinationX = 54; destinationY = 60;
+      destinationAngle();
+      goToGate(); delay(2000);
+      destinationX = 56; destinationY = 22;
+      destinationAngle();
+      goToGate();
+    }
+    if(gateNumber == 2){
+      destinationX = -16; destinationY = 18;
+      goToGate(); delay(1000);
+      destinationX = -16; destinationY = 88;
+      destinationAngle();
+      goToGate(); delay(1000);
+      destinationX = 60; destinationY = 86;
+      destinationAngle();
+      goToGate(); delay(1000);
+      destinationX = 60; destinationY = 110;
+      destinationAngle();
+      goToGate(); delay(1000);
+      destinationX = 28; destinationY = 110;
+      destinationAngle();
+      goToGate();
+    }
+    if(gateNumber == 3){
+      destinationX = -16; destinationY = 18;
+      goToGate(); delay(1000);
+      destinationX = -16; destinationY = 84;
+      destinationAngle();
+      goToGate(); delay(1000);
+      destinationX = -30; destinationY = 100;
+      destinationAngle();
+      goToGate(); delay(1000);
+      destinationX = -48; destinationY = 100;
+      destinationAngle();
+      goToGate(); delay(1000);
+      destinationX = -48; destinationY = 50;
+      destinationAngle();
+      goToGate();
+    }
+    i = false;
+  }
+  motors.setSpeeds(0,0);
+}
+
+
+    
+    
+    
+    
+    /*else if(x>destinationX && y>destinationY){
+      //turn left towards destination
+      while(angle != round(calcAngle)){
+        //Turn in order to face towards the destination
+        findLocation();
+        turnSensorUpdate();
+        angle = getAngle();
+        destinationAngle();
+        motors.setSpeeds(-100,100);
+      }
+    }else if(x>destinationX && y<destinationY){
+      //turn left towards destination
+      while(angle != round(calcAngle)){
+        findLocation();
+        turnSensorUpdate();
+        angle = getAngle();
+        destinationAngle();
+        motors.setSpeeds(-100,100);
+      }
+      //Turn in order to face towards the destination
+      //}
+    }else if(x<destinationX && y>destinationY){
+      //turn left towards destination
+      while(angle != round(calcAngle)){
+        //Turn in order to face towards the destination
+        findLocation();
+        turnSensorUpdate();
+        angle = getAngle();
+        destinationAngle();
+        motors.setSpeeds(-100,100);
+      }
+    }
+
+  findLocation();
+  motors.setSpeeds(0,0);
+  lcd.clear();
+  lcd.print("Location"); 
+  lcd.gotoXY(0, 1);
+  lcd.print("found");
+  delay(50);*/
