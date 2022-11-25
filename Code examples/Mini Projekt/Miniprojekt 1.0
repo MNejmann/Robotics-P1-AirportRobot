@@ -1,0 +1,248 @@
+#include <Wire.h>
+#include <Zumo32U4.h>
+Zumo32U4LineSensors lineSensors;
+Zumo32U4Motors motors;
+Zumo32U4LCD lcd;
+Zumo32U4ButtonA buttonA;
+Zumo32U4ButtonB buttonB;
+Zumo32U4ButtonC buttonC;
+Zumo32U4ProximitySensors proxSensors;
+Zumo32U4Encoders encoders;
+#define NUM_SENSORS 5
+uint16_t lineSensorValues[NUM_SENSORS];
+int threshold = 100; // White threshold, white return values lower than this
+
+bool useEmitters = true;
+int CLsensor;
+int CRsensor;
+int level[5]={0,0,0,0,0};
+int i;
+bool k = true;
+
+
+
+struct LineSensorsWhite{ // True if White, False if Black
+  bool L;
+  bool LC;
+  bool C;
+  bool RC;
+  bool R;
+};
+LineSensorsWhite sensorsState = {0,0,0,0,0};
+
+
+struct prox{
+  const uint8_t sensorThreshold = 20;
+  //uint16_t BrightnessLevels[20] = {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20};
+  uint16_t BrightnessLevels[4]={0.4,0.8,7,8};
+  int object[4] = {0,0,0,0};
+  int left_sensor;
+  int center_left_sensor;
+  int center_right_sensor;
+  int right_sensor;
+};
+
+struct prox prox;
+void readSensors(LineSensorsWhite &state){
+// Next line reads the sensor values and store them in the array lineSensorValues
+  lineSensors.read(lineSensorValues, useEmitters ? QTR_EMITTERS_ON : QTR_EMITTERS_OFF);
+// In the following lines use the values of the sensors to update the struct
+}
+
+void move(int lSpeed, int rSpeed, int time){
+  motors.setSpeeds(lSpeed, rSpeed);
+  delay(time);
+}
+
+void setup() {
+  lineSensors.initFiveSensors();
+  Serial.begin(9600);
+  lcd.clear();
+  proxSensors.initThreeSensors();
+  proxSensors.setBrightnessLevels(prox.BrightnessLevels, 8);
+}
+
+
+
+void checkSensors(){
+  readSensors(sensorsState);
+  lineSensors.readCalibrated(level);
+  if(level[0]<threshold) sensorsState.L=true;
+  else sensorsState.L=false;
+  if(level[1]<threshold) sensorsState.LC=true;
+  else sensorsState.LC=false;
+  if(level[2]<threshold) sensorsState.C=true;
+  else sensorsState.C=false;
+  if(level[3]<threshold) sensorsState.RC=true;
+  else sensorsState.RC=false;
+  if(level[4]<threshold) sensorsState.R=true;
+  else sensorsState.R=false;
+  Serial.println((String)level[0]+" "+(String)level[1]+" "+(String)level[2]+" "+(String)level[3]+" "+(String)level[4]);
+}
+
+void findLine(){
+  delay(1000);
+  bool l = true;
+  while(l){
+    motors.setSpeeds(300, 300);
+    checkSensors();
+    if(sensorsState.R==1 && sensorsState.L==1 && sensorsState.LC==1 && sensorsState.C==1 && sensorsState.RC==1){
+      if(k){
+        delay(100); 
+        move(100,-100,750);
+      }
+      else{
+        delay(100); 
+        move(-100,100,750);
+      }
+      
+      k = false;
+      l = false;
+      
+    }
+    
+     
+  }
+}
+  
+void followLine(){
+  i = 0;
+  while(i != 1){
+    checkSensors();
+    threshold = 100;
+    int mSpeedL;
+    int mSpeedR;
+    mSpeedL = 200; mSpeedR = 200;
+    if(sensorsState.C==1 && level[1]+-50==level[3]+-50){ //level[1]+-50==level[3]+-50 anden del af statementet fungere ikke
+      motors.setSpeeds(mSpeedL,mSpeedR);
+    }else if(sensorsState.C==1 && level[1]+-50<level[3]+-50){
+      mSpeedR = mSpeedR + (level[3]-level[1])/2;
+      motors.setSpeeds(mSpeedL,mSpeedR);
+    }else if(sensorsState.C==1 && level[1]+-50>level[3]+-50){
+      mSpeedL = mSpeedL + (level[1]-level[3])/2;
+      motors.setSpeeds(mSpeedL,mSpeedR);
+    }else if(sensorsState.L==1 && sensorsState.R==1){
+      delay(50);
+      motors.setSpeeds(0, 0);
+      i = 1;
+    }
+  }
+    do{motors.setSpeeds(-100,-100);
+    checkSensors();
+    }while(sensorsState.C==0);
+  move(100,100,100);
+  motors.setSpeeds(0,0);
+}
+
+
+
+void calibrateSensors(){
+  lcd.clear();
+  // Wait 1 second and then begin automatic sensor calibration
+  // by rotating in place to sweep the sensors over the line
+  delay(1000);
+  for(uint16_t i = 0; i < 120; i++)
+  {
+    if (i > 30 && i <= 90)
+    {
+      motors.setSpeeds(-200, 200);
+    }
+    else
+    {
+      motors.setSpeeds(200, -200);
+    }
+    lineSensors.calibrate();
+    lineSensors.readCalibrated(level);
+    Serial.println((String)level[0]+" "+(String)level[1]+" "+(String)level[2]+" "+(String)level[3]+" "+(String)level[4]);
+  }
+  motors.setSpeeds(0, 0);
+}
+
+
+void distLong(){
+  bool l = true;
+  delay(400);
+  move(200,200,250);
+  while(l){
+    motors.setSpeeds(200,200);
+    checkSensors();
+    if(sensorsState.C==1){
+      move(-300,-300,200);
+      checkSensors();
+      while(sensorsState.C==0){
+        motors.setSpeeds(-300, -300);
+        checkSensors();
+        if (sensorsState.C==1){
+          delay(300);
+          motors.setSpeeds(0,0);
+          l = false;
+          }
+        }
+        break;
+      }
+    }
+  move(100,150,100);
+  followLine();
+
+}
+
+void distShort(){
+  bool l = true;
+  float motorSpeed = 150;
+  float CPR = 51.45*12;
+  float D = 3.9;
+  float cm;
+  char report[120];
+  delay(800);
+  move(350,150,450);
+  move(-100,100,1800);
+  while (l){
+    motors.setSpeeds(100,100);
+    checkSensors();
+    if(sensorsState.C==1){
+      l=false;
+    }
+  }
+  move(-100,100,900);
+  move(200,200,900);
+  move(-100,100,100);
+  findLine();
+  followLine();
+}
+
+void detectCan(){
+  proxSensors.read();
+  lineSensors.emittersOn();
+  delay(50);
+  CLsensor = proxSensors.countsFrontWithLeftLeds();
+  CRsensor = proxSensors.countsFrontWithRightLeds();
+  lcd.gotoXY(0,0);
+  lcd.print(CLsensor);
+
+  lcd.gotoXY(0,1);
+  lcd.print(CRsensor);
+}
+
+void distToCan(){
+  if(CLsensor==8 && CRsensor==8){
+    distShort();
+  }if(CLsensor==2 && CRsensor==2){
+    distLong();
+  }
+}
+
+void loop() {
+  if(buttonA.getSingleDebouncedPress()==1){
+    findLine();
+    followLine();    
+    while(true){
+      detectCan();
+      distToCan();
+    }
+  }if(buttonB.getSingleDebouncedPress()==1){
+    calibrateSensors();
+  }
+  if(buttonC.getSingleDebouncedPress()==1){
+    detectCan();
+  }
+}
