@@ -1,0 +1,38 @@
+#include <Arduino_BuiltIn.h>
+#include <Zumo32U4.h>
+#include <Wire.h>
+
+int PinRead1 = 0;
+int PinRead2 = 0;
+int gateNumber = 0;
+
+void setup()
+{
+  Serial.begin(9600);
+  pinMode(0, INPUT);
+  pinMode(1, INPUT);
+}
+
+
+
+void UnoRead(){
+PinRead1 = digitalRead(0);
+PinRead2 = digitalRead(1);
+if (PinRead1 ==1 &&PinRead2 ==0){
+gateNumber = 1;
+}
+else if (PinRead1 ==0 &&PinRead2 ==1){
+gateNumber = 2;
+}
+else if (PinRead1 ==1 &&PinRead2 ==1){
+gateNumber = 3;
+}
+Serial.print("gateNumber:");
+Serial.println(gateNumber);
+  delay(100);
+}
+void loop()
+{ 
+UnoRead();
+
+}
