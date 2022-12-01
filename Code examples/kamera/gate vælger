@@ -6,8 +6,6 @@ Pixy2 pixy;
 
 uint8_t r, g, b; 
 int gateNumber = 0;
-bool k = true;
-
 
 void setup()
 {
@@ -21,8 +19,6 @@ void setup()
 }
 
 void GetRGB () {
-//while (k==true){
-//for (int i=0; i<5; ++i){
 pixy.video.getRGB(pixy.frameWidth/2, pixy.frameHeight/2, &r, &g, &b);
 if (r>230 && g<60 && b<60){
 gateNumber = 1;
@@ -37,11 +33,5 @@ delay(100);
 Serial.print("gateNumber:");
 Serial.println(gateNumber);
 }
-//k=false;
-//}}
-
-void loop()
-{ 
-GetRGB () ;
-
-}
+void loop(){ 
+GetRGB () ;}
