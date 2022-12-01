@@ -1,0 +1,47 @@
+// NOTE, THIS PROGRAM REQUIRES FIRMWARE VERSION 3.0.11 OR GREATER 
+#include <Pixy2.h>
+#include <stdio.h>
+// This is the main Pixy object 
+Pixy2 pixy;
+
+uint8_t r, g, b; 
+int gateNumber = 0;
+bool k = true;
+
+
+void setup()
+{
+  Serial.begin(9600);
+  Serial.print("Starting...\n");
+  
+  // we must initialize the pixy object
+  pixy.init();
+  // Getting the RGB pixel values requires the 'video' program
+  pixy.changeProg("video");
+}
+
+void GetRGB () {
+//while (k==true){
+//for (int i=0; i<5; ++i){
+pixy.video.getRGB(pixy.frameWidth/2, pixy.frameHeight/2, &r, &g, &b);
+if (r>230 && g<60 && b<60){
+gateNumber = 1;
+}
+else if (r<60 && g>230 && b<200){
+gateNumber = 2;
+}
+else if (r<60 && g<200 && b>230){
+gateNumber = 3;
+}
+delay(100);
+Serial.print("gateNumber:");
+Serial.println(gateNumber);
+}
+//k=false;
+//}}
+
+void loop()
+{ 
+GetRGB () ;
+
+}
