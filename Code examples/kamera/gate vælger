@@ -1,3 +1,4 @@
+
 // NOTE, THIS PROGRAM REQUIRES FIRMWARE VERSION 3.0.11 OR GREATER 
 #include <Pixy2.h>
 #include <stdio.h>
@@ -11,27 +12,49 @@ void setup()
 {
   Serial.begin(9600);
   Serial.print("Starting...\n");
-  
   // we must initialize the pixy object
   pixy.init();
   // Getting the RGB pixel values requires the 'video' program
   pixy.changeProg("video");
+  pinMode(2, OUTPUT);
+  pinMode(3, OUTPUT);
 }
 
 void GetRGB () {
 pixy.video.getRGB(pixy.frameWidth/2, pixy.frameHeight/2, &r, &g, &b);
-if (r>230 && g<60 && b<60){
+if (r>250 && g<220 && b<220){
 gateNumber = 1;
 }
-else if (r<60 && g>230 && b<200){
+else if (r<100 && g>250 && b<220){
 gateNumber = 2;
 }
-else if (r<60 && g<200 && b>230){
+else if (r<100 && g<220 && b>250){
 gateNumber = 3;
 }
 delay(100);
 Serial.print("gateNumber:");
 Serial.println(gateNumber);
 }
-void loop(){ 
-GetRGB () ;}
+void PinOut() {
+digitalWrite(2 , LOW); 
+digitalWrite(3 , LOW); 
+
+if (gateNumber == 1){
+digitalWrite(2, HIGH);
+}
+else if (gateNumber == 2){
+digitalWrite(3, HIGH);
+}
+else if (gateNumber == 3){
+digitalWrite(2, HIGH);
+digitalWrite(3, HIGH);
+}
+}
+
+
+
+void loop()
+{ 
+GetRGB () ;
+PinOut() ;
+}
