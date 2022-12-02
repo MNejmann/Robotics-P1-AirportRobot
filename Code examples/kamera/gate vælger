@@ -54,16 +54,20 @@ void GetRGB () {
 }
   //this are a funktion 
 void PinOut() {
-    //write 
+    //turns pin 2 off 
   digitalWrite(2 , LOW); 
-  digitalWrite(3 , LOW); 
+    //turns pin 3 off 
+  digitalWrite(3 , LOW);
   if (gateNumber == 1){
+      //turns pin 2 on 
     digitalWrite(2, HIGH);
   }
   else if (gateNumber == 2){
+      //turns pin 3 on 
     digitalWrite(3, HIGH);
   }
   else if (gateNumber == 3){
+      //turns pin 2 and 3 on 
     digitalWrite(2, HIGH);
     digitalWrite(3, HIGH);
   }
