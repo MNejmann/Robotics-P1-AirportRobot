@@ -19,7 +19,7 @@ void setup()
   pixy.init();
     // Getting the RGB pixel values requires the 'video' program
   pixy.changeProg("video");
-  // Pin 2 og 3 bliver sat til at skulle give indformation og ikke modtage 
+  // Pins 2 and 3 are set to give information and not receive
   pinMode(2, OUTPUT);
   pinMode(3, OUTPUT);
 }
