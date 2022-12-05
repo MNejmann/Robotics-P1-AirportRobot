@@ -42,7 +42,7 @@ void setup(){
    //wait 1000 milliseconds 
   delay(1000);
 }
-
+//variables used in the code
 int CLsensor;
 int CRsensor;
 
@@ -57,17 +57,19 @@ int PinRead1 = 0;
 int PinRead2 = 0;
 int gateNumber = 0;
 
+  //This are a funktion there returns the turnAngle of the zumo 
 int32_t getAngle(){
   // turnAngle is a variable defined in TurnSensor.cpp
   // This math converts the number into degrees turned since the
   // last sensor reset.
   return ((((int32_t)turnAngle >> 16) * 360) >> 16)*(-1);
 }
-
+  //variables used in the code
 int destinationX;
 int destinationY;
 float calcAngle;
 
+  //This are a funktion there returns the location (x,y) of the zumo 
 float findLocation(){
   //Changing the between CPR = 51.45 or 75.81
   float CPR = 51.45*12;
@@ -97,6 +99,7 @@ float findLocation(){
   return angle;
 }
 
+//This are a funktion there returns the Calculated angle of the zumo
 float destinationAngle(){
   //Calculates the angle towards the partial destination
   if(destinationY>y && destinationX<x){
@@ -115,19 +118,24 @@ float destinationAngle(){
   Serial.println((String)calcAngle);
   return calcAngle;
 }
-
+//This are a funktion there read the indformation from the arduino UNO 
 void UnoRead(){
+    //gives the variables PinRead1/2 the indformation from pin 0 and 1
   PinRead1 = digitalRead(0);
   PinRead2 = digitalRead(1);
+    // pin 1 is on and pin 2 is off then it reads gate 1
   if (PinRead1 ==1 &&PinRead2 ==0){
     gateNumber = 1;
   }
+    // pin 1 is off and pin 2 is on then it reads gate 2
   else if (PinRead1 ==0 &&PinRead2 ==1){
     gateNumber = 2;
   }
+  // pin 1 is on and pin 2 is oonff then it reads gate 3
   else if (PinRead1 ==1 &&PinRead2 ==1){
     gateNumber = 3;
   }
+  //write the  gateNumber to the Serial monitor
   Serial.print("gateNumber:");
   Serial.println(gateNumber);
   delay(100);
