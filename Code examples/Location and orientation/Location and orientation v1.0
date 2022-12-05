@@ -1,3 +1,4 @@
+  //THIS PROGRAM REQUIRES this liberys
 #include <Arduino_BuiltIn.h>
 #include <Zumo32U4.h>
 #include <Wire.h>
@@ -6,6 +7,7 @@
 #include "TurnSensor.h"
 #include <L3G.h>
 
+// This are the main objects 
 Zumo32U4Motors motors;
 Zumo32U4Encoders encoders;
 Zumo32U4LCD lcd;
@@ -13,6 +15,7 @@ L3G gyro;
 Zumo32U4Buzzer buzzer;
 Zumo32U4ProximitySensors proxSensors;
 
+// this is for chaning the brightnes levels for the proxemety sensors  
 struct prox{
   const uint8_t sensorThreshold = 20;
   uint16_t BrightnessLevels[8]={0.2,0.4,0.8,1.2,2,4,6,8};
@@ -21,20 +24,22 @@ struct prox{
 struct prox prox;
 
 void setup(){
+    //we use Serial.begin(9600); so we kan use the Serial monitor
   Serial.begin(9600);
+    // Pins 2 and 3 are set to receive information 
   pinMode(0, INPUT);
   pinMode(1, INPUT);
+    // sets up the sensors and calibrates them 
   proxSensors.initThreeSensors();
   proxSensors.setBrightnessLevels(prox.BrightnessLevels, 8);
   encoders.init();
   turnSensorSetup();
-  delay(500);
   turnSensorReset();
-  //lcd.clear();
   turnSensorUpdate();
   int32_t angle = getAngle();
   findLocation();
   destinationAngle();
+   //wait 1000 milliseconds 
   delay(1000);
 }
 
