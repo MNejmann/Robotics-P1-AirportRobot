@@ -1,4 +1,4 @@
-  //THIS PROGRAM REQUIRES this liberys
+  //THIS PROGRAM REQUIRES this libraies
 #include <Arduino_BuiltIn.h>
 #include <Zumo32U4.h>
 #include <Wire.h>
@@ -213,7 +213,6 @@ void altRoute3(){
 
 void detectAndAvoidObject(){
   //Detects objects and select the right alternative route
-  //Not done yet
   proxSensors.read();
   CLsensor = proxSensors.countsFrontWithLeftLeds();
   CRsensor = proxSensors.countsFrontWithRightLeds();
