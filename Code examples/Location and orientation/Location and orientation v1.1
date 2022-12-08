@@ -1,27 +1,271 @@
-/* Turnsensor.h and TurnSensor.cpp provide functions for
-configuring the L3GD20H gyro, calibrating it, and using it to
-measure how much the robot has turned about its Z axis. */
-
-#pragma once
-
+  //THIS PROGRAM REQUIRES these libraies
+#include <Arduino_BuiltIn.h>
 #include <Zumo32U4.h>
+#include <Wire.h>
+#include <math.h>
+#include <Zumo32U4.h>
+#include "TurnSensor.h"
 #include <L3G.h>
-// This constant represents a turn of 45 degrees.
-const int32_t turnAngle45 = 0x20000000;
 
-// This constant represents a turn of 90 degrees.
-const int32_t turnAngle90 = turnAngle45 * 2;
+// These are the main objects 
+Zumo32U4Motors motors;
+Zumo32U4Encoders encoders;
+Zumo32U4LCD lcd;
+L3G gyro;
+Zumo32U4Buzzer buzzer;
+Zumo32U4ProximitySensors proxSensors;
 
-// This constant represents a turn of approximately 1 degree.
-const int32_t turnAngle1 = (turnAngle45 + 22) / 45;
+// this is for changing the brightness levels for the proximity sensors  
+struct prox{
+  const uint8_t sensorThreshold = 20;
+  uint16_t BrightnessLevels[8]={0.2,0.4,0.8,1.2,2,4,6,8};
+  int object[8] = {0,0,0,0,0,0,0,0};
+};
+struct prox prox;
 
-// These are defined in TurnSensor.cpp:
-void turnSensorSetup();
-void turnSensorReset();
-void turnSensorUpdate();
-extern uint32_t turnAngle;
-extern int16_t turnRate;
+void setup(){
+    //we use Serial.begin(9600); so we kan use the Serial monitor
+  Serial.begin(9600);
+    // Pins 2 and 3 are set to receive information 
+  pinMode(0, INPUT);
+  pinMode(1, INPUT);
+    // sets up the sensors and calibrates them 
+  proxSensors.initThreeSensors();
+  proxSensors.setBrightnessLevels(prox.BrightnessLevels, 8);
+  encoders.init();
+  turnSensorSetup();
+  delay(500);
+  turnSensorReset();
+  turnSensorUpdate();
+  int32_t angle = getAngle();
+  findLocation();
+  destinationAngle();
+   //wait 1000 milliseconds 
+  delay(1000);
+}
+//variables used in the code
+int CLsensor;
+int CRsensor;
 
-// These objects must be defined in your sketch.
-extern Zumo32U4LCD lcd;
-extern L3G gyro;
+float deltaL;
+float deltaR;
+float x = 0; float y = 0;
+float totalAngle = 0;
+int32_t angle = getAngle();
+float xSide;
+float ySide;
+int PinRead1 = 0;
+int PinRead2 = 0;
+int gateNumber = 0;
+
+  //This is a function which returns the turnAngle of the Zumo 
+int32_t getAngle(){
+  // turnAngle is a variable defined in TurnSensor.cpp
+  // This math converts the number into degrees turned since the last sensor reset.
+  return ((((int32_t)turnAngle >> 16) * 360) >> 16)*(-1);
+}
+  //variables used in the code
+int destinationX;
+int destinationY;
+float calcAngle;
+
+  //This is a function which returns the location (x,y) of the Zumo 
+float findLocation(){
+  //Changing the between CPR = 51.45 or 75.81
+  float CPR = 51.45*12;
+  //Calculates angles and distances
+  deltaL = ((encoders.getCountsAndResetLeft()/CPR)*M_PI*3.9);
+  deltaR = ((encoders.getCountsAndResetRight()/CPR)*M_PI*3.9);
+  angle = round(getAngle());
+  xSide = ((deltaL+deltaR)/2)*sin(fabs(angle)*(M_PI/180));
+  ySide = sqrt(pow((deltaL+deltaR)/2,2)-pow(xSide,2));
+  //totals x and y coordinates, while knowing wether or not it should be added or subtracted
+  if(destinationX+-2<x){
+    x -= xSide;
+  }else{
+    x += xSide;
+  }
+  if(destinationY+-2<y){
+    y -= ySide;
+  }else{
+    y += ySide;
+  }
+  return angle;
+}
+
+//This is a function which returns the Calculated angle of the Zumo
+float destinationAngle(){
+  //Calculates the angle towards the partial destination
+  if(destinationY>y && destinationX<x){
+    calcAngle = atan((destinationX-x)/(destinationY-y))*(180/M_PI);
+  }else if(destinationY>y && destinationX>x){
+    calcAngle = atan((destinationX-x)/(destinationY-y))*(180/M_PI);
+  }else if(destinationY<y && destinationX<x){
+    calcAngle = -(atan(((destinationY-y)/(destinationX-x)))*(180/M_PI))-90;
+  }else if(destinationY<y && destinationX>x){
+    calcAngle = fabs(atan(((destinationY-y)/(destinationX-x)))*(180/M_PI))+90;
+  }
+  return calcAngle;
+}
+//This is a function which read the information from the Arduino UNO 
+void UnoRead(){
+    //gives the variables PinRead1/2 the information from pin 0 and 1
+  PinRead1 = digitalRead(0);
+  PinRead2 = digitalRead(1);
+    // if pin 1 is on and pin 2 is off then it reads gate 1
+  if (PinRead1 ==1 &&PinRead2 ==0){
+    gateNumber = 1;
+  }
+    // if pin 1 is off and pin 2 is on then it reads gate 2
+  else if (PinRead1 ==0 &&PinRead2 ==1){
+    gateNumber = 2;
+  }
+  // if pin 1 is on and pin 2 is oonff then it reads gate 3
+  else if (PinRead1 ==1 &&PinRead2 ==1){
+    gateNumber = 3;
+  }
+
+  delay(100);
+}
+
+void goToGate(){
+  //Drive until within +-2 of partial destination
+  while((destinationX-2>round(x) || round(x)>destinationX+2) || (destinationY-2>round(y) || round(y)>destinationY+2)){
+    findLocation();
+    delay(50);
+    while(angle+-1 != round(calcAngle)){
+      //Turn in order to face towards the destination
+      findLocation();
+      turnSensorUpdate();
+      destinationAngle();
+      //Decides which way to turn
+      if(calcAngle-angle>250){
+        motors.setSpeeds(-100,100);
+      }else if(calcAngle>angle){
+        motors.setSpeeds(100,-100);        
+      }else{
+        motors.setSpeeds(-100,100);
+      }
+    }
+    motors.setSpeeds(100,100);
+    if(destinationX==34 && destinationY==50 || destinationX == -16 && destinationY == 88 || destinationX == -16 && destinationY == 84){
+      detectAndAvoidObject();
+    }
+  }
+  motors.setSpeeds(0,0);  
+}
+
+void altRoute1(){
+  //First alternative route
+  destinationX = -22; destinationY = 18;
+      destinationAngle();
+      goToGate(); delay(400);
+  destinationX = -20; destinationY = 64;
+      destinationAngle();
+      goToGate(); delay(400);
+  destinationX = 4; destinationY = 62;
+      destinationAngle();
+      goToGate(); delay(400);
+  destinationX = 20; destinationY = 44;
+      destinationAngle();
+      goToGate(); delay(400);
+}
+
+void altRoute2(){
+  //Second alternative route
+  destinationX = 22; destinationY = 16;
+      destinationAngle();
+      goToGate(); delay(400);
+  destinationX = 22; destinationY = 50;
+      destinationAngle();
+      goToGate(); delay(400);
+  destinationX = -6; destinationY = 82;
+      destinationAngle();
+      goToGate(); delay(400);
+}
+
+void altRoute3(){
+  //Third alternative route
+  destinationX = 22; destinationY = 26;
+      destinationAngle();
+      goToGate(); delay(400);
+  destinationX = 22; destinationY = 54;
+      destinationAngle();
+      goToGate(); delay(400);
+  destinationX = -16; destinationY = 86;
+      destinationAngle();
+      goToGate(); delay(400);
+}
+
+
+void detectAndAvoidObject(){
+  //Detects objects and select the right alternative route
+  proxSensors.read();
+  CLsensor = proxSensors.countsFrontWithLeftLeds();
+  CRsensor = proxSensors.countsFrontWithRightLeds();
+  if(CLsensor==8 && CRsensor==8){
+    if(gateNumber==1){
+      altRoute1();
+    }else if(gateNumber==2){
+      altRoute2();
+    }else if(gateNumber==3){
+      altRoute3();
+    }
+  }
+}
+
+bool i = true;
+
+void loop(){
+  while(gateNumber == 0){
+    UnoRead();
+  }
+  //Drive to the correct gate
+  while(i){
+    //Needs to detect which color is describing which gateNumber it needs to go to
+    if(gateNumber == 1){
+      destinationX = 34; destinationY = 50;
+      goToGate(); delay(400);
+      destinationX = 54; destinationY = 50;
+      destinationAngle();
+      goToGate(); delay(400);
+      destinationX = 56; destinationY = 16;
+      destinationAngle();
+      goToGate();
+    }
+    if(gateNumber == 2){
+      destinationX = -16; destinationY = 18;
+      goToGate(); delay(400);
+      destinationX = -16; destinationY = 88;
+      destinationAngle();
+      goToGate(); delay(400);
+      destinationX = 58; destinationY = 87;
+      destinationAngle();
+      goToGate(); delay(400);
+      destinationX = 56; destinationY = 110;
+      destinationAngle();
+      goToGate(); delay(400);
+      destinationX = 24; destinationY = 110;
+      destinationAngle();
+      goToGate();
+    }
+    if(gateNumber == 3){
+      destinationX = -16; destinationY = 18;
+      goToGate(); delay(400);
+      destinationX = -16; destinationY = 84;
+      destinationAngle();
+      goToGate(); delay(400);
+      destinationX = -30; destinationY = 100;
+      destinationAngle();
+      goToGate(); delay(400);
+      destinationX = -52; destinationY = 100;
+      destinationAngle();
+      goToGate(); delay(400);
+      destinationX = -52; destinationY = 50;
+      destinationAngle();
+      goToGate();
+    }
+    i = false;
+  }
+  motors.setSpeeds(0,0);
+}
