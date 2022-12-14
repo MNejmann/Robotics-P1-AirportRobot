@@ -21,14 +21,14 @@ struct LineSensorsWhite{ // True if White, False if Black
 };
 
 //Custom variable for the proximitysensors
-struct prox{
+struct proximity{
   const uint8_t sensorThreshold = 20;
   uint16_t BrightnessLevels[4]={0.4,0.8,7,8};
   int object[4] = {0,0,0,0};
 };
 
 LineSensorsWhite sensorsState = {0,0,0,0,0};
-prox prox;
+proximity prox;
 
 int threshold = 100; // White threshold, The closer to 0 the more white it is.
 bool useEmitters = true;
