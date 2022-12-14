@@ -28,7 +28,7 @@ struct prox{
 };
 
 LineSensorsWhite sensorsState = {0,0,0,0,0};
-struct prox prox;
+prox prox;
 
 int threshold = 100; // White threshold, The closer to 0 the more white it is.
 bool useEmitters = true;
